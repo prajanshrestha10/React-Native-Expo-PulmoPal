@@ -1,10 +1,12 @@
 import * as Device from 'expo-device';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
+  type ScrollViewInstance,
   StyleSheet,
   TextInput,
   View,
@@ -35,6 +37,13 @@ function getDevMenuHint() {
   );
 }
 
+type Message = {
+  id: string;
+  text: string;
+  sender: 'user' | 'assistant';
+  createdAt: number;
+};
+
 export default function HomeScreen() {
   const suggestedQuestions = [
     'What are common treatment side effects?',
@@ -47,7 +56,61 @@ export default function HomeScreen() {
     setInputText(question);
   }
 
+  const handleSend = () => {
+    const trimmedText = inputText.trim();
+
+    if (!trimmedText) {
+      return;
+    }
+
+    const newMessage: Message = {
+      id: Date.now().toString(),
+      text: trimmedText,
+      sender: 'user',
+      createdAt: Date.now(),
+    };
+
+    // This creates a new array containing all existing messages followed by the new one.
+    setMessages((currentMessages) => [
+      ...currentMessages,
+      newMessage,
+    ]);
+
+    setInputText('');
+    Keyboard.dismiss(); 
+
+    setIsResponding(true);
+    setTimeout(() => {
+      const assistantMessage: Message = {
+        id: `${Date.now()}-assistant`,
+        text: 'I can provide general educational information, but I cannot diagnose conditions or replace advice from your healthcare team.',
+        sender: 'assistant',
+        createdAt: Date.now(),
+      };
+
+      setMessages((currentMessages) => [
+        ...currentMessages,
+        assistantMessage,
+      ]);
+      setIsResponding(false);
+    }, 1000);
+  };
+
+  const formatMessageTime = (timestamp: number) => {
+    return new Date(timestamp).toLocaleTimeString([], {
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  };
+
+  // useStates
   const [inputText, setInputText] = useState('');
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isResponding, setIsResponding] = useState(false);
+  const cannotSend = !inputText.trim() || isResponding;
+
+  // useRefs
+  const scrollViewRef = useRef<ScrollViewInstance>(null);
 
   return (
     <ThemedView style={styles.container}>
@@ -57,12 +120,16 @@ export default function HomeScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           keyboardVerticalOffset={0}>
           <ScrollView
+            ref={scrollViewRef}
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="on-drag"
-            showsVerticalScrollIndicator={false}>
-            
+            showsVerticalScrollIndicator={false}
+            onContentSizeChange={() => {
+              scrollViewRef.current?.scrollToEnd({ animated: true });
+            }}
+          >  
             <View style={styles.heroSection}>
               <ThemedText style={styles.title}>
                 Welcome to PulmoPal
@@ -83,6 +150,59 @@ export default function HomeScreen() {
               </ThemedText>
             </ThemedView>
 
+            {messages.length > 0 && (
+              <View style={styles.messagesContainer}>
+                {messages.map((message) => (
+                  <View
+                    key={message.id}
+                    style={[
+                      styles.messageRow,
+                      message.sender === 'user'
+                        ? styles.userMessageRow
+                        : styles.assistantMessageRow,
+                    ]}>
+                    <View
+                      style={[
+                        styles.messageBubble,
+                        message.sender === 'user'
+                          ? styles.userMessageBubble
+                          : styles.assistantMessageBubble,
+                      ]}>
+                      <ThemedText
+                        style={[
+                          styles.messageText,
+                          message.sender === 'user' && styles.userMessageText,
+                        ]}>
+                        {message.text}
+                      </ThemedText>
+                      <ThemedText
+                        style={[
+                          styles.messageTime,
+                          message.sender === 'user' && styles.userMessageTime,
+                        ]}>
+                        {formatMessageTime(message.createdAt)}
+                      </ThemedText>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {isResponding && (
+              <View style={[styles.messageRow, styles.assistantMessageRow]}>
+                <View
+                  style={[
+                    styles.messageBubble,
+                    styles.assistantMessageBubble,
+                  ]}>
+                  <ThemedText style={styles.respondingText}>
+                    PulmoPal is responding…
+                  </ThemedText>
+                </View>
+              </View>
+            )}
+
+            {/* suggestions section */}
             <View style={styles.suggestionsSection}>
               <ThemedText style={styles.suggestionsTitle}>
                 You can ask:
@@ -116,9 +236,12 @@ export default function HomeScreen() {
               />
 
               <Pressable
+                onPress={handleSend}
+                disabled={cannotSend}
                 style={({ pressed }) => [
                   styles.sendButton,
-                  pressed && styles.sendButtonPressed,
+                  !inputText.trim() && styles.sendButtonDisabled,
+                  pressed && inputText.trim() && styles.sendButtonPressed,
                 ]}>
                 <ThemedText style={styles.sendButtonText}>
                   Send
@@ -259,5 +382,68 @@ const styles = StyleSheet.create({
     color: colors.surface,
     fontSize: 15,
     fontWeight: '700',
+  },
+  messagesContainer: {
+    marginTop: 20,
+    gap: 12,
+  },
+
+  messageRow: {
+    width: '100%',
+    flexDirection: 'row',
+  },
+
+  userMessageRow: {
+    justifyContent: 'flex-end',
+  },
+
+  assistantMessageRow: {
+    justifyContent: 'flex-start',
+  },
+
+  messageBubble: {
+    maxWidth: '82%',
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+
+  userMessageBubble: {
+    backgroundColor: colors.primary,
+    borderBottomRightRadius: 6,
+  },
+
+  assistantMessageBubble: {
+    backgroundColor: colors.primaryLight,
+    borderBottomLeftRadius: 6,
+  },
+
+  messageText: {
+    color: colors.textPrimary,
+    fontSize: 16,
+    lineHeight: 22,
+  },
+
+  userMessageText: {
+    color: colors.surface,
+  },
+
+  sendButtonDisabled: {
+    opacity: 0.45,
+  },
+  respondingText: {
+    color: colors.textSecondary,
+    fontSize: 14,
+    fontStyle: 'italic',
+  },
+  messageTime: {
+    color: colors.textSecondary,
+    fontSize: 11,
+    marginTop: 6,
+    alignSelf: 'flex-end',
+  },
+  userMessageTime: {
+    color: colors.surface,
+    opacity: 0.8,
   },
 });
