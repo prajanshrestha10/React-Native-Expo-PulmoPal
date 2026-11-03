@@ -103,6 +103,13 @@ export default function HomeScreen() {
     });
   };
 
+  const handleNewChat = () => {
+    setMessages([]);
+    setInputText('');
+    setIsResponding(false);
+    Keyboard.dismiss();
+  };
+
   // useStates
   const [inputText, setInputText] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
@@ -118,7 +125,26 @@ export default function HomeScreen() {
         <KeyboardAvoidingView
           style={styles.keyboardView}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={0}>
+          keyboardVerticalOffset={0}
+        >
+          <View style={styles.chatHeader}>
+            <ThemedText style={styles.chatHeaderTitle}>
+              PulmoPal
+            </ThemedText>
+
+            {messages.length > 0 && !isResponding && (
+              <Pressable
+                onPress={handleNewChat}
+                style={({ pressed }) => [
+                  styles.newChatButton,
+                  pressed && styles.newChatButtonPressed,
+                ]}>
+                <ThemedText style={styles.newChatButtonText}>
+                  New chat
+                </ThemedText>
+              </Pressable>
+            )}
+          </View>
           <ScrollView
             ref={scrollViewRef}
             style={styles.scrollView}
@@ -130,25 +156,52 @@ export default function HomeScreen() {
               scrollViewRef.current?.scrollToEnd({ animated: true });
             }}
           >  
-            <View style={styles.heroSection}>
-              <ThemedText style={styles.title}>
-                Welcome to PulmoPal
-              </ThemedText>
+            {messages.length === 0 && (
+              <>
+                <View style={styles.heroSection}>
+                  <ThemedText style={styles.title}>
+                    Welcome to PulmoPal
+                  </ThemedText>
 
-              <ThemedText style={styles.subtitle}>
-                Supportive guidance for your lung health journey
-              </ThemedText>
-            </View>
+                  <ThemedText style={styles.subtitle}>
+                    Supportive guidance for your lung health journey
+                  </ThemedText>
+                </View>
 
-            <ThemedView style={styles.welcomeCard}>
-              <ThemedText style={styles.welcomeTitle}>
-                How can I support you today?
-              </ThemedText>
+                <ThemedView style={styles.welcomeCard}>
+                  <ThemedText style={styles.welcomeTitle}>
+                    How can I support you today?
+                  </ThemedText>
 
-              <ThemedText style={styles.welcomeText}>
-                Ask about lung cancer, treatments, side effects, or everyday support.
-              </ThemedText>
-            </ThemedView>
+                  <ThemedText style={styles.welcomeText}>
+                    Ask about lung cancer, treatments, side effects, or everyday support.
+                  </ThemedText>
+                </ThemedView>
+
+                <View style={styles.suggestionsSection}>
+                  <ThemedText style={styles.suggestionsTitle}>
+                    You can ask:
+                  </ThemedText>
+                </View>
+
+                {/* suggestions section */}
+                <View style={styles.chipsContainer}>
+                  {suggestedQuestions.map((question) => (
+                    <Pressable
+                      key={question}
+                      onPress={() => handleSuggestedQuestion(question)}
+                      style={({ pressed }) => [
+                        styles.chip,
+                        pressed && styles.chipPressed,
+                      ]}>
+                      <ThemedText style={styles.chipText}>
+                        {question}
+                      </ThemedText>
+                    </Pressable>
+                  ))}
+                </View>
+              </>
+            )}
 
             {messages.length > 0 && (
               <View style={styles.messagesContainer}>
@@ -201,54 +254,30 @@ export default function HomeScreen() {
                 </View>
               </View>
             )}
-
-            {/* suggestions section */}
-            <View style={styles.suggestionsSection}>
-              <ThemedText style={styles.suggestionsTitle}>
-                You can ask:
-              </ThemedText>
-
-              <View style={styles.chipsContainer}>
-                {suggestedQuestions.map((question) => (
-                  <Pressable
-                    key={question}
-                    onPress={() => handleSuggestedQuestion(question)}
-                    style={({ pressed }) => [
-                      styles.chip,
-                      pressed && styles.chipPressed,
-                    ]}>
-                    <ThemedText style={styles.chipText}>
-                      {question}
-                    </ThemedText>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-
-            <View style={styles.composer}>
-              <TextInput
-                style={styles.input}
-                value={inputText}
-                onChangeText={setInputText}
-                placeholder="Ask PulmoPal a question..."
-                placeholderTextColor={colors.textSecondary}
-                multiline
-              />
-
-              <Pressable
-                onPress={handleSend}
-                disabled={cannotSend}
-                style={({ pressed }) => [
-                  styles.sendButton,
-                  !inputText.trim() && styles.sendButtonDisabled,
-                  pressed && inputText.trim() && styles.sendButtonPressed,
-                ]}>
-                <ThemedText style={styles.sendButtonText}>
-                  Send
-                </ThemedText>
-              </Pressable>
-            </View>
           </ScrollView>
+          <View style={styles.composer}>
+            <TextInput
+              style={styles.input}
+              value={inputText}
+              onChangeText={setInputText}
+              placeholder="Ask PulmoPal a question..."
+              placeholderTextColor={colors.textSecondary}
+              multiline
+            />
+
+            <Pressable
+              onPress={handleSend}
+              disabled={cannotSend}
+              style={({ pressed }) => [
+                styles.sendButton,
+                !inputText.trim() && styles.sendButtonDisabled,
+                pressed && inputText.trim() && styles.sendButtonPressed,
+              ]}>
+              <ThemedText style={styles.sendButtonText}>
+                Send
+              </ThemedText>
+            </Pressable>
+          </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
     </ThemedView>
@@ -356,7 +385,9 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 8,
     marginTop: 24,
-    gap: 8,
+    marginLeft: 5,
+    marginRight: 5,
+    gap: 8
   },
   input: {
     flex: 1,
@@ -365,7 +396,7 @@ const styles = StyleSheet.create({
     minHeight: 44,
     maxHeight: 110,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 10
   },
   sendButton: {
     backgroundColor: colors.accent,
@@ -445,5 +476,38 @@ const styles = StyleSheet.create({
   userMessageTime: {
     color: colors.surface,
     opacity: 0.8,
+  },
+  chatHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    backgroundColor: colors.background,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+
+  chatHeaderTitle: {
+    color: colors.textPrimary,
+    fontSize: 20,
+    fontWeight: '700',
+  },
+
+  newChatButton: {
+    backgroundColor: colors.primaryLight,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+  },
+
+  newChatButtonPressed: {
+    opacity: 0.7,
+  },
+
+  newChatButtonText: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
