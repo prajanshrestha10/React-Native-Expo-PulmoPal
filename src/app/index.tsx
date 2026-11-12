@@ -45,6 +45,117 @@ type Message = {
 };
 
 export default function HomeScreen() {
+  // Chat API
+  const generateGroqReply = async (
+    userText: string
+  ): Promise<string> => {
+    const apiKey = process.env.EXPO_PUBLIC_GROQ_API_KEY;
+
+    if (!apiKey) {
+      throw new Error('Groq API key is missing.');
+    }
+
+    const response = await fetch(
+      'https://api.groq.com/openai/v1/chat/completions',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'openai/gpt-oss-20b',
+          messages: [
+            {
+              role: 'system',
+              content: `You are PulmoPal, an educational support assistant focused on lung health and lung cancer.
+
+              Rules:
+              - Provide clear, compassionate, general educational information.
+              - Do not diagnose medical conditions.
+              - Do not prescribe medication or recommend changing treatment.
+              - Encourage consultation with a qualified healthcare professional.
+              - If the user reports severe trouble breathing, chest pain, coughing up significant blood, fainting, confusion, or another possible emergency, tell them to contact local emergency services immediately.
+              - Avoid requesting identifying medical information.
+              - Politely redirect questions unrelated to lung health.
+              - Keep responses concise and easy to understand.`,
+            },
+            {
+              role: 'user',
+              content: userText,
+            },
+          ],
+          temperature: 0.4,
+          max_completion_tokens: 400,
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      const apiMessage =
+        data?.error?.message ??
+        `Groq request failed with status ${response.status}.`;
+
+      throw new Error(apiMessage);
+    }
+
+    const reply = data?.choices?.[0]?.message?.content?.trim();
+
+    if (!reply) {
+      throw new Error('Groq returned an empty response.');
+    }
+
+    return reply;
+  };
+
+  // Asking the API for their available models
+  const listGroqModels = async (): Promise<void> => {
+    const apiKey = process.env.EXPO_PUBLIC_GROQ_API_KEY;
+
+    if (!apiKey) {
+      console.warn('Groq API key is missing.');
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        'https://api.groq.com/openai/v1/models',
+        {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.warn(
+          'Could not list Groq models:',
+          data?.error?.message ?? response.status
+        );
+        return;
+      }
+
+      const modelIds = data?.data
+        ?.filter(
+          (model: { active?: boolean }) =>
+            model.active !== false
+        )
+        .map(
+          (model: { id: string }) =>
+            model.id
+        );
+
+      console.log('Available Groq models:', modelIds);
+    } catch (error) {
+      console.warn('Failed to list Groq models:', error);
+    }
+  };
+
   const suggestedQuestions = [
     'What are common treatment side effects?',
     'How can I manage shortness of breath?',
@@ -56,7 +167,7 @@ export default function HomeScreen() {
     setInputText(question);
   }
 
-  const handleSend = () => {
+  const handleSend = async () => {
     const trimmedText = inputText.trim();
 
     if (!trimmedText) {
@@ -80,10 +191,12 @@ export default function HomeScreen() {
     Keyboard.dismiss(); 
 
     setIsResponding(true);
-    setTimeout(() => {
+    try {
+      const replyText = await generateGroqReply(trimmedText);
+
       const assistantMessage: Message = {
         id: `${Date.now()}-assistant`,
-        text: 'I can provide general educational information, but I cannot diagnose conditions or replace advice from your healthcare team.',
+        text: replyText,
         sender: 'assistant',
         createdAt: Date.now(),
       };
@@ -92,10 +205,43 @@ export default function HomeScreen() {
         ...currentMessages,
         assistantMessage,
       ]);
-      setIsResponding(false);
-    }, 1000);
-  };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'An unexpected error occurred.';
 
+      console.warn(
+        'Groq request failed:',
+        errorMessage
+      );
+
+      const normalizedError = errorMessage.toLowerCase();
+
+      const isTemporaryError =
+        normalizedError.includes('high demand') ||
+        normalizedError.includes('unavailable') ||
+        normalizedError.includes('temporarily') ||
+        normalizedError.includes('quota');
+
+      const assistantErrorMessage: Message = {
+        id: `${Date.now()}-error`,
+        text: isTemporaryError
+          ? 'PulmoPal is temporarily busy because the AI service is experiencing high demand. Please wait a few minutes and try again.'
+          : 'Sorry, PulmoPal could not generate a response. Please try again.',
+        sender: 'assistant',
+        createdAt: Date.now(),
+      };
+
+      setMessages((currentMessages) => [
+        ...currentMessages,
+        assistantErrorMessage,
+      ]);
+    } finally {
+      setIsResponding(false);
+    }
+  };
+  
   const formatMessageTime = (timestamp: number) => {
     return new Date(timestamp).toLocaleTimeString([], {
       hour: 'numeric',
