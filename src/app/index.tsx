@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
+import Markdown from 'react-native-markdown-display';
 import { colors } from '../theme/colors';
 
 function getDevMenuHint() {
@@ -78,7 +79,16 @@ export default function HomeScreen() {
               - If the user reports severe trouble breathing, chest pain, coughing up significant blood, fainting, confusion, or another possible emergency, tell them to contact local emergency services immediately.
               - Avoid requesting identifying medical information.
               - Politely redirect questions unrelated to lung health.
-              - Keep responses concise and easy to understand.`,
+              - Keep responses under 500 words.
+              - Prioritize the most important information.
+              - Always finish the current sentence and list before ending.
+              - If the topic is too broad, provide a concise overview and invite the user to ask a follow-up question.
+              
+              Formatting requirements:
+              - Use short paragraphs and clear headings.
+              - Use bullet points or numbered lists when helpful.
+              - Avoid tables.
+              - Do not use raw HTML.`,
             },
             {
               role: 'user',
@@ -367,13 +377,19 @@ export default function HomeScreen() {
                           ? styles.userMessageBubble
                           : styles.assistantMessageBubble,
                       ]}>
-                      <ThemedText
-                        style={[
-                          styles.messageText,
-                          message.sender === 'user' && styles.userMessageText,
-                        ]}>
-                        {message.text}
-                      </ThemedText>
+                      {message.sender === 'assistant' ? (
+                        <Markdown style={markdownStyles}>
+                          {message.text}
+                        </Markdown>
+                      ) : (
+                        <ThemedText
+                          style={[
+                            styles.messageText,
+                            styles.userMessageText,
+                          ]}>
+                          {message.text}
+                        </ThemedText>
+                      )}
                       <ThemedText
                         style={[
                           styles.messageTime,
@@ -657,3 +673,125 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+
+const markdownStyles = {
+  body: {
+    color: colors.textPrimary,
+    fontSize: 16,
+    lineHeight: 23,
+    marginTop: 0,
+    marginBottom: 0,
+  },
+
+  paragraph: {
+    marginTop: 0,
+    marginBottom: 10,
+  },
+
+  strong: {
+    color: colors.textPrimary,
+    fontWeight: '700' as const,
+  },
+
+  em: {
+    fontStyle: 'italic' as const,
+  },
+
+  heading1: {
+    color: colors.textPrimary,
+    fontSize: 22,
+    fontWeight: '700' as const,
+    marginTop: 4,
+    marginBottom: 10,
+  },
+
+  heading2: {
+    color: colors.textPrimary,
+    fontSize: 19,
+    fontWeight: '700' as const,
+    marginTop: 4,
+    marginBottom: 8,
+  },
+
+  heading3: {
+    color: colors.textPrimary,
+    fontSize: 17,
+    fontWeight: '700' as const,
+    marginTop: 4,
+    marginBottom: 6,
+  },
+
+  bullet_list: {
+    marginTop: 2,
+    marginBottom: 10,
+  },
+
+  ordered_list: {
+    marginTop: 2,
+    marginBottom: 10,
+  },
+
+  list_item: {
+    marginBottom: 6,
+  },
+
+  bullet_list_icon: {
+    color: colors.primary,
+  },
+
+  ordered_list_icon: {
+    color: colors.primary,
+    fontWeight: '700' as const,
+  },
+
+  blockquote: {
+    backgroundColor: colors.primaryLight,
+    borderLeftColor: colors.primary,
+    borderLeftWidth: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginVertical: 8,
+  },
+
+  code_inline: {
+    backgroundColor: colors.primaryLight,
+    color: colors.textPrimary,
+    borderRadius: 4,
+    paddingHorizontal: 5,
+  },
+
+  fence: {
+    backgroundColor: '#F1EEE8',
+    color: colors.textPrimary,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 10,
+    marginVertical: 8,
+  },
+
+  table: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginVertical: 8,
+  },
+
+  tr: {
+    borderBottomWidth: 1,
+    borderColor: colors.border,
+  },
+
+  th: {
+    backgroundColor: colors.primaryLight,
+    padding: 7,
+  },
+
+  td: {
+    padding: 7,
+  },
+
+  link: {
+    color: colors.primary,
+    textDecorationLine: 'underline' as const,
+  },
+};
