@@ -316,15 +316,15 @@ Use a user-facing error message and log expected API failures with `console.warn
 
 ## 🔗 YouTube Link(s)
 
-* *App Overview - https://youtu.be/isbljCTy2Dk*
-* *Code Walkthrough - *
-* *App Demonstration - *
+* *App Overview - https://www.youtube.com/watch?v=vIaUgC7nzTo*
+* *Code Walkthrough - https://youtu.be/ZPKiWydBoMo*
+* *App Demonstration - https://youtu.be/1iRudAKI_MQ*
 
 ## 💼 LinkedIn Post Link(s)
 
-* *App Overview - *
-* *Code Walkthrough - *
-* *App Demonstration - *
+* *App Overview - https://www.linkedin.com/feed/update/urn:li:activity:7529070131155722240/*
+* *Code Walkthrough - https://www.linkedin.com/feed/update/urn:li:activity:7530793642735886337/*
+* *App Demonstration - https://www.linkedin.com/feed/update/urn:li:activity:7531493729472430080/*
 
 ## 📄 License
 
