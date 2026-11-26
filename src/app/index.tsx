@@ -79,7 +79,7 @@ export default function HomeScreen() {
               - If the user reports severe trouble breathing, chest pain, coughing up significant blood, fainting, confusion, or another possible emergency, tell them to contact local emergency services immediately.
               - Avoid requesting identifying medical information.
               - Politely redirect questions unrelated to lung health.
-              - Keep responses under 500 words.
+              - Keep responses under 250 words.
               - Prioritize the most important information.
               - Always finish the current sentence and list before ending.
               - If the topic is too broad, provide a concise overview and invite the user to ask a follow-up question.
